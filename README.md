@@ -5,12 +5,13 @@ A self-hostable Node.js and TypeScript service that accepts events from an appli
 ![Node.js 22+](https://img.shields.io/badge/node-22%2B-339933?logo=node.js&logoColor=white)
 ![TypeScript strict](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/code-kasha/webhook-delivery/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/code-kasha/webhook-delivery/actions/workflows/ci.yml)
 
 [API reference](docs/api.md) · [Design and trade-offs](docs/design.md) · [Receiver verification](docs/receiver.md) · [Deployment](docs/deployment.md) · [Contributing](CONTRIBUTING.md)
 
 ![Local Swagger UI showing endpoint registration, rotation and event publishing](docs/images/swagger.png)
 
-<!-- Add CI/release/image badges and the live-demo link after those resources exist. -->
+<!-- Add release/image badges and the live-demo link after those resources exist. -->
 
 - **Endpoints:** event subscriptions, disable/resume and signing-secret rotation with a 24-hour overlap.
 - **Publishing:** admin or publish-only API keys; concurrent requests with the same idempotency key create one event and one fan-out.
@@ -20,7 +21,7 @@ A self-hostable Node.js and TypeScript service that accepts events from an appli
 - **API contract:** Zod request schemas generate committed OpenAPI and locally served Swagger UI.
 - **Operations:** PostgreSQL leases recover interrupted work, process and database probes, JSON logs and graceful shutdown.
 
-> **Status:** unreleased local implementation targeting v1.0.0. No public repository, published image or hosted demo has been created yet. See the [next tasks](docs/tasks.md) and [release checklist](docs/release.md).
+> **Status:** public, unreleased implementation targeting v1.0.0. No release, published image or hosted demo exists yet. See the [next tasks](docs/tasks.md) and [release checklist](docs/release.md).
 
 Follow the [reviewer walkthrough](docs/walkthrough.md) to exercise delivery, rotation, pause/resume and replay.
 
@@ -97,7 +98,7 @@ pnpm openapi:check
 docker build -t webhook-delivery:local .
 ```
 
-CI is configured to run these checks with Node 22 and 24 and a PostgreSQL service container, plus a smoke test of the running image. The [design page](docs/design.md) explains the choice of explicit SQL instead of an ORM, queue recovery and security limits. Only claim checks that have actually run; [verification notes](docs/verification.md) record local results and remaining checks.
+CI runs these checks with Node 22 and 24 and a PostgreSQL service container, plus a smoke test of the running image on the Node 22 job. The [first GitHub run](https://github.com/code-kasha/webhook-delivery/actions/runs/36322054815) passed on both versions. The [design page](docs/design.md) explains the choice of explicit SQL instead of an ORM, queue recovery and security limits. [Verification notes](docs/verification.md) record actual local/CI results and remaining checks.
 
 ## Credits
 

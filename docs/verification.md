@@ -33,7 +33,7 @@ Checks after the fixes:
 - Linux `test` image, Node 22.23.3, OpenSSL 3.0.22, PostgreSQL 17.11: 85 passed, none skipped. The test stage now installs the OpenSSL CLI.
 - Rebuilt amd64 runtime image: migrations applied, `scripts/smoke.mjs` passed, UID 1000, `docker stop` exit code 0, no error-level log lines.
 
-At the end of task 1, Node 24, arm64 and browser verification were outstanding. They were subsequently checked below. GitHub Actions, publication, hosted deployment, public DNS/TLS receivers and load performance remain unverified.
+At the end of task 1, Node 24, arm64 and browser verification were outstanding. They were subsequently checked below. GitHub Actions results are recorded at the end of this file; release publication, hosted deployment, public DNS/TLS receivers and load performance remain unverified.
 
 ## Runtime matrix and reviewer walkthrough — 27 September 2026
 
@@ -77,3 +77,18 @@ A separate PostgreSQL 17 container used an OpenSSL-generated, short-lived self-s
 Connected Brave rendered `/docs` with the local CSS/JS, route groups, authorization dialog and request forms. Live readiness showed 200 with `{"ok":true}`; an unauthenticated delivery query showed 401. The real 1905×854 overview screenshot is [swagger.png](images/swagger.png), referenced in the README without credentials. Added explicit fictional Zod examples after observing random regex-generated sample text in Swagger. Generated OpenAPI remains the contract source's output.
 
 Reviewed README/API/design/deployment/receiver/release docs for at-least-once semantics, no ordering guarantee, eight-attempt budget versus five-failure pause, separate replay/resume and sleeping-worker behavior. Credits remain byte-for-byte unchanged. Local Markdown file links were checked. No live demo URL, release badge or published-image claim was added.
+
+## Public repository and GitHub CI — 27 September 2026
+
+At Akash's request to perform task 4, created public [code-kasha/webhook-delivery](https://github.com/code-kasha/webhook-delivery), configured `origin` and pushed `main` at `961b3da7f9a451da9c2ffabd2625a84e400373d4`. Only the main branch was pushed; local tool checkpoint refs and ignored test artifacts were not published.
+
+[CI run 36322054815](https://github.com/code-kasha/webhook-delivery/actions/runs/36322054815) completed successfully:
+
+- Node 22.23.2 and 24.21.0 on Ubuntu 24.04, PostgreSQL 17.11 service containers: each passed lint, strict typecheck, all 85 tests (no skips), build and OpenAPI freshness.
+- The Node 22 job built the Docker runtime, applied migrations and passed liveness, readiness, Swagger assets, OpenAPI and unauthenticated-request rejection smoke checks.
+- Image publication and release jobs were skipped as intended for a branch push. No tag, image release or hosted service was published.
+- GitHub emitted a non-failing annotation about `pnpm/action-setup@v4` targeting the deprecated Node 20 action runtime and being forced onto Node 24. The action and all checks succeeded; the workflow was not changed.
+
+Reviewed tracked paths and credential patterns in Git history before pushing; no private artifacts, environment files or live credential matches were found. Repository Actions default permissions are read-only and pull-request approval is disabled; workflow checks also use `contents: read`. Only tag-gated publishing jobs request package/release write permissions. The repository's Actions secret list is empty. Fixed credentials in Compose/CI are disposable development fixtures, not a deployed admin key. This is a targeted review, not a formal secret-scanner certification.
+
+The main-branch badge endpoint returned HTTP 200 and reports passing. Added that real badge and corrected the README's old local-only status in a follow-up documentation commit prepared locally, pending separate authorization to push it.

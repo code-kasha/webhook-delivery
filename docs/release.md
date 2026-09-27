@@ -1,6 +1,6 @@
 # Release checklist
 
-This is a local, unreleased project. Remote actions require Akash's explicit request in the current message; permission for one push does not cover a later push.
+This is a public, unreleased project. Remote actions require Akash's explicit request in the current message; permission for one push does not cover a later push.
 
 ## Before v1.0.0
 

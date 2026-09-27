@@ -38,15 +38,15 @@ Completed locally on 27 September 2026. Runtime versions, commands and limits ar
 - [x] Walk through register → publish → inspect attempt → rotate → pause/resume → replay and document the commands.
 - [x] Review the README and docs for consistency, especially at-least-once delivery, eight attempts versus five-failure pause, and the free demo's sleeping worker.
 
-Completed locally on 27 September 2026 using connected Brave and native/Compose HTTP walkthroughs. See [walkthrough](walkthrough.md) and [verification](verification.md). The Credits paragraph is unchanged. Next is task 4, only on an explicit request for remote actions.
+Completed locally on 27 September 2026 using connected Brave and native/Compose HTTP walkthroughs. See [walkthrough](walkthrough.md) and [verification](verification.md). The Credits paragraph is unchanged.
 
 ## 4. Create the public repository and verify CI — only when requested
 
-- [ ] Create public `code-kasha/webhook-delivery`, add the remote and push the reviewed local commit with authorization for that push.
-- [ ] Inspect actual GitHub Actions results (Node 22/24, PostgreSQL, container smoke, OpenAPI check); fix failures locally and request authorization for any additional push.
-- [ ] Add the working CI badge. Review permissions and secrets; no public admin key.
+- [x] Create public `code-kasha/webhook-delivery`, add the remote and push the reviewed local commit with authorization for that push.
+- [x] Inspect actual GitHub Actions results (Node 22/24, PostgreSQL, container smoke, OpenAPI check); fix failures locally and request authorization for any additional push.
+- [x] Add the working CI badge. Review permissions and secrets; no public admin key.
 
-**Done when:** the public repository exists and its actual checks pass.
+The [public repository](https://github.com/code-kasha/webhook-delivery) and [successful CI run](https://github.com/code-kasha/webhook-delivery/actions/runs/36322054815) were verified on 27 September 2026 for commit `961b3da`. Both Node versions passed all 85 tests; no fixes were needed. The badge and this documentation update are prepared locally; publishing that follow-up commit requires separate push authorization. Task 5 remains gated on an explicit deployment request.
 
 ## 5. Set up the controlled live demo — only when requested
 
