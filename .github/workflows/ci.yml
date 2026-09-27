@@ -1,0 +1,99 @@
+name: CI
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        node: [22, 24]
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: webhook_test
+          POSTGRES_USER: webhook
+          POSTGRES_PASSWORD: webhook
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U webhook -d webhook_test"
+          --health-interval 2s --health-timeout 2s --health-retries 30
+    env:
+      TEST_DATABASE_URL: postgresql://webhook:webhook@localhost:5432/webhook_test
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - run: pnpm openapi:check
+      - name: Build and smoke test the running container
+        if: matrix.node == 22
+        env:
+          SECRET_ENCRYPTION_KEY: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        run: |
+          docker build -t webhook-delivery:check .
+          docker run --rm --network host -e DATABASE_URL="$TEST_DATABASE_URL" webhook-delivery:check node dist/cli.js migrate
+          docker run -d --name webhook-smoke --network host -e DATABASE_URL="$TEST_DATABASE_URL" -e SECRET_ENCRYPTION_KEY webhook-delivery:check
+          trap 'docker logs webhook-smoke; docker rm -f webhook-smoke' EXIT
+          pnpm smoke
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: checks
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+      - name: Check tag matches package version
+        run: node -e "if('v'+require('./package.json').version!==process.env.GITHUB_REF_NAME)process.exit(1)"
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Image name
+        id: image
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ steps.image.outputs.name }}:${{ github.ref_name }}
+            ${{ steps.image.outputs.name }}:latest
+          annotations: |
+            index:org.opencontainers.image.description=Self-hostable webhook delivery with PostgreSQL, signed payloads and retries.
+            index:org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            index:org.opencontainers.image.licenses=MIT
+  release:
+    needs: publish
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - name: Prepare assets and notes
+        run: |
+          mkdir release
+          cp openapi.json release/
+          cp src/verify.ts release/
+          cp docs/receiver.md release/
+          (cd release && sha256sum openapi.json verify.ts receiver.md > SHA256SUMS)
+          awk -v heading="## ${GITHUB_REF_NAME#v} " 'index($0, heading) == 1 {found=1; next} /^## / {found=0} found' CHANGELOG.md > release-notes.md
+          test -s release-notes.md
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" release/* --verify-tag --title "webhook-delivery $GITHUB_REF_NAME" --notes-file release-notes.md

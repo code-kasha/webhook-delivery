@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: webhook
+      POSTGRES_USER: webhook
+      POSTGRES_PASSWORD: webhook
+    ports:
+      - '127.0.0.1:55432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U webhook -d webhook']
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  migrate:
+    build: .
+    command: ['node', 'dist/cli.js', 'migrate']
+    environment:
+      DATABASE_URL: postgresql://webhook:webhook@db:5432/webhook
+    depends_on:
+      db:
+        condition: service_healthy
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://webhook:webhook@db:5432/webhook
+      SECRET_ENCRYPTION_KEY: ${SECRET_ENCRYPTION_KEY:?Generate a key and set it in .env}
+      HOST: 0.0.0.0
+      ALLOW_PRIVATE_DESTINATIONS: ${ALLOW_PRIVATE_DESTINATIONS:-false}
+    ports:
+      - '127.0.0.1:3000:3000'
+    stop_grace_period: 40s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+volumes:
+  postgres-data:

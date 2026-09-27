@@ -1,0 +1,77 @@
+# Next tasks toward v1.0.0
+
+Updated 27 September 2026. These are small handoff units, suitable for separate threads/models. Read `AGENTS.md` and the private `../webhook-delivery-notes/agent-start.md` before starting. Work locally; remote actions need an explicit request in that message.
+
+## Completed baseline
+
+- [x] Confirm name, full scope and PostgreSQL test strategy with Akash.
+- [x] Implement endpoints, rotation, scoped keys, idempotent publishing and durable fan-out.
+- [x] Implement signed delivery, retry budget/jitter, leases, failed queue/replay, auto-pause and retained backlog.
+- [x] Implement attempt/audit transactions, outbound guards, receiver helper/example and operational probes/shutdown.
+- [x] Add generated OpenAPI, Swagger assets, documentation, MIT license and CI/release workflow definitions.
+- [x] Run 67 tests on Windows/Node 26 and Linux/Node 22 with real PostgreSQL 17.11.
+- [x] Pass lint, type-check, build, schema freshness and amd64 running-container smoke; observe clean container shutdown (exit 0).
+
+“Implemented” does not mean independently reviewed or released. Version remains `0.1.0`; the target is v1.0.0.
+
+## 1. Review delivery correctness and security
+
+- [ ] Review `src/worker.ts`, `src/service.ts`, `src/send.ts`, `src/destination.ts` and `src/verify.ts` against the original scope and design document.
+- [ ] Add focused coverage for uncovered boundaries: expiry of the final allowed claim, competing replays, response-body truncation with invalid/multibyte UTF-8, DNS deadline and slow-drip responses, and real HTTPS hostname/certificate behavior.
+- [ ] Exercise an actual killed worker and temporary database failure, not only forced lease expiry in SQL.
+- [ ] Review lock ordering, pause/disable during in-flight work, subscription snapshot semantics and SQL row typing. Fix concrete findings without expanding v1 scope.
+
+**Done when:** findings are fixed or explicitly documented, relevant regression tests and standard checks pass, and the verification record is updated. Start here next.
+
+## 2. Verify the supported runtime and container matrix
+
+- [ ] Run the full suite under Node 24 (22 and local 26 have already run).
+- [ ] Build and smoke test a Linux arm64 image locally; the workflow specifies it, but it has not been exercised.
+- [ ] Re-run the exact README native and Compose quick starts from clean configuration, including key creation, real receiver delivery and persistence across restart.
+- [ ] Check database TLS with a controlled configuration and document any provider-specific setup.
+
+**Done when:** each tested runtime/architecture and command path is recorded with actual results; no simulated published-image claims.
+
+## 3. Finish API presentation and reviewer documentation
+
+- [ ] Connect a browser, visually check Swagger UI, and capture a real screenshot under `docs/images/` for the README. The current session had no connected browser.
+- [ ] Walk through register → publish → inspect attempt → rotate → pause/resume → replay using Swagger or documented commands.
+- [ ] Review the README and docs for consistency, especially at-least-once delivery, eight attempts versus five-failure pause, and the free demo's sleeping worker.
+
+**Done when:** screenshot and walkthrough match the running service, all links and claims are reviewable, and the Credits paragraph remains exact.
+
+## 4. Create the public repository and verify CI — only when requested
+
+- [ ] Create public `code-kasha/webhook-delivery`, add the remote and push the reviewed local commit with authorization for that push.
+- [ ] Inspect actual GitHub Actions results (Node 22/24, PostgreSQL, container smoke, OpenAPI check); fix failures locally and request authorization for any additional push.
+- [ ] Add the working CI badge. Review permissions and secrets; no public admin key.
+
+**Done when:** the public repository exists and its actual checks pass.
+
+## 5. Set up the controlled live demo — only when requested
+
+- [ ] Deploy on Render with a dedicated Neon database; verify TLS, migrations, readiness, restart recovery and a controlled fictional receiver.
+- [ ] Keep admin credentials private and avoid turning the demo into an unrestricted outbound-request service.
+- [ ] State the verified demo URL, sleeping-worker limitation and exact end date, roughly three months after the actual release date.
+
+**Done when:** the deployed behavior is verified and documented; no hypothetical URL/date appears as live.
+
+## 6. Prepare and publish v1.0.0 — publication only when requested
+
+- [ ] Complete tasks 1–5 and `docs/release.md`.
+- [ ] Set version to `1.0.0` consistently in package, OpenAPI and sender user-agent; regenerate the schema and date the changelog.
+- [ ] Run final checks, commit locally with the agent co-author trailer, then push/tag only on explicit request.
+- [ ] Verify the actual amd64/arm64 GHCR manifests, package visibility, release notes and downloadable SHA256SUMS.
+- [ ] Add real release/image links and the requested completed/not-actively-maintained status only after shipping.
+
+**Done when:** all release artifacts can be downloaded and verified by a reviewer.
+
+## 7. Update portfolio, profile and repository metadata — only when requested
+
+- [ ] Read the portfolio's `agent-start.md`; update branch `v2` project data, 16:10 image, 2:1 cover and résumé highlights; run `pnpm resume` and check the two-project résumé selection.
+- [ ] Update `../code-kasha` Featured Projects/write-up link and Latest Releases row.
+- [ ] Set repository homepage/topics and upload the social preview through GitHub's web UI.
+
+**Done when:** each separately authorized destination reflects the actual release and demo.
+
+At the end of every task: record decisions, changed files, commands/results, commit hash, next task and blockers in the private handoff. Do not infer push/deployment authorization from earlier sessions.
