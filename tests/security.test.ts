@@ -94,6 +94,12 @@ describe('SSRF destination guard', () => {
     'fe80::1',
     '::ffff:127.0.0.1',
     '2001:db8::1',
+    '::10.0.0.1',
+    '::a00:1',
+    '4000::1',
+    'fec0::1',
+    '64:ff9b::a00:1',
+    '2002:a00:1::',
   ])('refuses %s', (address) => expect(isPublic(address)).toBe(false));
   it.each(['8.8.8.8', '1.1.1.1', '2606:4700:4700::1111'])(
     'accepts public %s',
@@ -193,6 +199,41 @@ describe('bounded HTTP sender', () => {
       error: 'timeout',
     });
   });
+  it('caps stored bytes for invalid and split multibyte UTF-8', async () => {
+    const invalid = await listen((_req, res) =>
+      res.end(Buffer.concat([Buffer.alloc(3000, 0xff), Buffer.from([0])])),
+    );
+    const split = await listen((_req, res) => res.end('न'.repeat(1000)));
+    for (const url of [invalid, split]) {
+      const { body } = await send(url, '{}', {}, true);
+      expect(Buffer.byteLength(body)).toBeLessThanOrEqual(2048);
+      expect(Buffer.from(body).toString('utf8')).toBe(body);
+      expect(body).not.toContain('\u0000');
+    }
+    const { body } = await send(split, '{}', {}, true);
+    expect(body.replaceAll('न', '')).toMatch(/^\uFFFD?$/);
+  });
+  it('applies the total deadline to a slow-drip response body', async () => {
+    const url = await listen((_req, res) => {
+      res.writeHead(200);
+      const drip = setInterval(() => res.write('.'), 10);
+      res.on('close', () => clearInterval(drip));
+    });
+    const result = await send(url, '{}', {}, true, 200);
+    expect(result).toMatchObject({ ok: false, code: 200, error: 'timeout' });
+    expect(result.duration).toBeLessThan(1000);
+  });
+  it('applies the total deadline to a DNS lookup that never answers', async () => {
+    const result = await send(
+      'https://fictional.example',
+      '{}',
+      {},
+      false,
+      50,
+      () => new Promise(() => {}),
+    );
+    expect(result).toMatchObject({ ok: false, code: null, error: 'timeout' });
+  });
   it('blocks loopback before connecting by default', async () => {
     const url = await listen(() => {
       throw new Error('Must not connect');
@@ -209,6 +250,9 @@ it('encrypts secrets with authenticated encryption', () => {
   expect(encrypted).not.toContain('secret');
   expect(decrypt(encrypted, key)).toBe('secret');
   expect(() => decrypt(encrypted, 'cd'.repeat(32))).toThrow();
+  const parts = encrypted.split('.');
+  parts[3] = parts[3]!.slice(0, 8);
+  expect(() => decrypt(parts.join('.'), key)).toThrow();
 });
 it('normalizes object keys recursively, preserving array order', () => {
   expect(canonical({ b: 2, a: { y: 1, x: 0 } })).toBe(

@@ -12,4 +12,12 @@ Initial implementation targeting v1.0.0:
 - Attempt history, JSON logging, probes and graceful shutdown.
 - Generated OpenAPI, Swagger UI, PostgreSQL tests and container/release workflows.
 
+Review fixes before release:
+
+- A claim could take over another worker's live lease when the claims raced, sending the delivery twice and recording it as `unknown`. Claims now re-check the lease after locking the endpoint.
+- A database connection lost during a transaction could crash the process and hide the original error; broken connections are now discarded.
+- Recording an outcome now retries through a brief database outage within the lease instead of falling back to crash recovery.
+- IPv6 destinations must be in global unicast `2000::/3`; unallocated and IPv4-compatible hex forms such as `::a00:1` were accepted.
+- Expiry of the final allowed claim now audits the resulting failure; the rotation overlap uses the database clock; AES-GCM tags must be 16 bytes.
+
 No release has been published. Move this entry to a dated version heading only when preparing an authorized release.

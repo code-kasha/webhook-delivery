@@ -16,12 +16,12 @@ Updated 27 September 2026. These are small handoff units, suitable for separate 
 
 ## 1. Review delivery correctness and security
 
-- [ ] Review `src/worker.ts`, `src/service.ts`, `src/send.ts`, `src/destination.ts` and `src/verify.ts` against the original scope and design document.
-- [ ] Add focused coverage for uncovered boundaries: expiry of the final allowed claim, competing replays, response-body truncation with invalid/multibyte UTF-8, DNS deadline and slow-drip responses, and real HTTPS hostname/certificate behavior.
-- [ ] Exercise an actual killed worker and temporary database failure, not only forced lease expiry in SQL.
-- [ ] Review lock ordering, pause/disable during in-flight work, subscription snapshot semantics and SQL row typing. Fix concrete findings without expanding v1 scope.
+- [x] Review `src/worker.ts`, `src/service.ts`, `src/send.ts`, `src/destination.ts` and `src/verify.ts` against the original scope and design document.
+- [x] Add focused coverage for uncovered boundaries: expiry of the final allowed claim, competing replays, response-body truncation with invalid/multibyte UTF-8, DNS deadline and slow-drip responses, and real HTTPS hostname/certificate behavior.
+- [x] Exercise an actual killed worker and temporary database failure, not only forced lease expiry in SQL.
+- [x] Review lock ordering, pause/disable during in-flight work, subscription snapshot semantics and SQL row typing. Fix concrete findings without expanding v1 scope.
 
-**Done when:** findings are fixed or explicitly documented, relevant regression tests and standard checks pass, and the verification record is updated. Start here next.
+Completed 27 September 2026; findings, fixes and check results are in [verification.md](verification.md). Remaining known limitation: SQL rows are untyped `pg` results cast at the boundary (documented trade-off in design.md); no row-typing defect was found.
 
 ## 2. Verify the supported runtime and container matrix
 
@@ -30,7 +30,7 @@ Updated 27 September 2026. These are small handoff units, suitable for separate 
 - [ ] Re-run the exact README native and Compose quick starts from clean configuration, including key creation, real receiver delivery and persistence across restart.
 - [ ] Check database TLS with a controlled configuration and document any provider-specific setup.
 
-**Done when:** each tested runtime/architecture and command path is recorded with actual results; no simulated published-image claims.
+**Done when:** each tested runtime/architecture and command path is recorded with actual results; no simulated published-image claims. Start here next.
 
 ## 3. Finish API presentation and reviewer documentation
 

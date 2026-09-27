@@ -21,6 +21,7 @@ export function decrypt(value: string, key: string) {
     'aes-256-gcm',
     Buffer.from(key, 'hex'),
     parts[0]!,
+    { authTagLength: 16 },
   );
   decipher.setAuthTag(parts[3]!);
   return Buffer.concat([

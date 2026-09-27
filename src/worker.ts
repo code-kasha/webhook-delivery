@@ -36,25 +36,27 @@ export async function claim(pool: Pool): Promise<Job | null> {
       LIMIT 1 FOR UPDATE OF e SKIP LOCKED`)
     ).rows[0];
     if (!endpoint) return null;
-    const expired = (
+    // The selection snapshot can predate a competing claim that committed before this lock was taken.
+    const inFlight = (
       await c.query(
-        "SELECT * FROM deliveries WHERE endpoint_id=$1 AND status='in_flight' FOR UPDATE",
+        "SELECT *, lease_until<=now() AS expired FROM deliveries WHERE endpoint_id=$1 AND status='in_flight' FOR UPDATE",
         [endpoint.id],
       )
     ).rows[0];
-    if (expired) {
+    if (inFlight && !inFlight.expired) return null;
+    if (inFlight) {
+      const status =
+        inFlight.cycle_attempts >= policy.maxAttempts ? 'failed' : 'pending';
       await c.query(
         "UPDATE attempts SET status='unknown',error='lease_expired',finished_at=now() WHERE delivery_id=$1 AND number=$2 AND status='started'",
-        [expired.id, expired.attempt_count],
+        [inFlight.id, inFlight.attempt_count],
       );
       await c.query(
         'UPDATE deliveries SET status=$2,lease_token=NULL,lease_until=NULL,next_attempt_at=now() WHERE id=$1',
-        [
-          expired.id,
-          expired.cycle_attempts >= policy.maxAttempts ? 'failed' : 'pending',
-        ],
+        [inFlight.id, status],
       );
-      await audit(c, 'delivery.lease_expired', expired.id);
+      await audit(c, 'delivery.lease_expired', inFlight.id);
+      if (status === 'failed') await audit(c, 'delivery.failed', inFlight.id);
     }
     const selected = (
       await c.query(
@@ -152,6 +154,7 @@ export class Worker {
   async once(): Promise<boolean> {
     const job = await claim(this.pool);
     if (!job) return false;
+    const claimed = Date.now();
     const timestamp = String(Math.floor(Date.now() / 1000));
     let result: SendResult;
     try {
@@ -184,7 +187,7 @@ export class Worker {
         error: 'signing_error',
       };
     }
-    const recorded = await finish(this.pool, job, result);
+    const recorded = await this.record(job, result, claimed);
     this.logger.info(
       {
         deliveryId: job.id,
@@ -196,6 +199,21 @@ export class Worker {
       'Delivery completed',
     );
     return true;
+  }
+  /** Retries a brief database outage within the lease; fencing makes a repeated finish harmless. */
+  private async record(job: Job, result: SendResult, claimed: number) {
+    for (let wait = 250; ; wait = Math.min(wait * 2, 4000)) {
+      try {
+        return await finish(this.pool, job, result);
+      } catch (error) {
+        if (Date.now() + wait >= claimed + policy.leaseMs) throw error;
+        this.logger.warn(
+          { deliveryId: job.id },
+          'Recording delivery outcome failed; retrying',
+        );
+        await delay(wait);
+      }
+    }
   }
   private async loop() {
     while (!this.stopping) {

@@ -1,6 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
-import { createServer } from 'node:http';
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
+import { createServer, type RequestListener, type Server } from 'node:http';
+import {
+  connect,
+  createServer as createTcpServer,
+  type Socket,
+} from 'node:net';
 import { createPool, migrate, transaction, type Pool } from '../src/db.js';
 import { readConfig, policy } from '../src/config.js';
 import { createApp } from '../src/app.js';
@@ -20,6 +27,7 @@ let service: Service;
 let admin: string;
 let actor: string;
 let publisher: string;
+let schemaUrl: string;
 const config = readConfig({
   DATABASE_URL: base,
   SECRET_ENCRYPTION_KEY: 'ab'.repeat(32),
@@ -31,7 +39,8 @@ beforeAll(async () => {
   await root.query(`CREATE SCHEMA ${schema}`);
   const url = new URL(base);
   url.searchParams.set('options', `-c search_path=${schema}`);
-  pool = createPool(url.toString());
+  schemaUrl = url.toString();
+  pool = createPool(schemaUrl);
   await migrate(pool);
   await migrate(pool);
   app = createApp(pool, config).app;
@@ -519,6 +528,244 @@ describe('rotation and actual receiver delivery', () => {
     ).toBe('succeeded');
     await new Promise<void>((r) => server.close(() => r()));
   });
+});
+async function receiver(handler: RequestListener) {
+  const server = createServer(handler);
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+  const { port } = server.address() as { port: number };
+  return { server, url: `http://127.0.0.1:${port}` };
+}
+async function closeReceiver(server: Server) {
+  server.closeAllConnections();
+  await new Promise<void>((r) => server.close(() => r()));
+}
+async function waitFor(check: () => Promise<boolean>, timeoutMs = 10000) {
+  const deadline = Date.now() + timeoutMs;
+  while (!(await check())) {
+    if (Date.now() > deadline) throw new Error('Condition not reached');
+    await new Promise((r) => setTimeout(r, 50));
+  }
+}
+describe('queue races and real failure recovery', () => {
+  it('never takes over a live lease when claims race across endpoints', async () => {
+    for (let i = 0; i < 3; i++) await endpoint();
+    for (let i = 0; i < 60; i++) await publish();
+    let failures = 0;
+    await Promise.all(
+      Array.from({ length: 8 }, async () => {
+        for (;;) {
+          const job = await claim(pool).catch(() => {
+            failures++;
+            return null;
+          });
+          if (job) {
+            await finish(pool, job, success);
+            continue;
+          }
+          const left = await pool.query(
+            "SELECT 1 FROM deliveries WHERE status<>'succeeded' LIMIT 1",
+          );
+          if (!left.rowCount) return;
+          await new Promise((r) => setTimeout(r, 5));
+        }
+      }),
+    );
+    expect(failures).toBe(0);
+    expect(
+      (await pool.query('SELECT DISTINCT status FROM attempts')).rows,
+    ).toEqual([{ status: 'succeeded' }]);
+    expect((await pool.query('SELECT 1 FROM attempts')).rowCount).toBe(180);
+  });
+  it('fails a delivery whose final allowed claim expires', async () => {
+    await endpoint();
+    await publish();
+    await pool.query('UPDATE deliveries SET cycle_attempts=$1', [
+      policy.maxAttempts - 1,
+    ]);
+    const last = await getJob();
+    expect(last.cycle_attempts).toBe(policy.maxAttempts);
+    await pool.query(
+      "UPDATE deliveries SET lease_until=now()-interval '1 second'",
+    );
+    expect(await claim(pool)).toBeNull();
+    expect((await pool.query('SELECT status FROM deliveries')).rows).toEqual([
+      { status: 'failed' },
+    ]);
+    expect(
+      (await pool.query('SELECT status,error FROM attempts')).rows,
+    ).toEqual([{ status: 'unknown', error: 'lease_expired' }]);
+    expect(
+      (
+        await pool.query(
+          "SELECT action FROM audit_log WHERE action LIKE 'delivery.%' ORDER BY id",
+        )
+      ).rows.map((r) => r.action),
+    ).toEqual([
+      'delivery.claimed',
+      'delivery.lease_expired',
+      'delivery.failed',
+    ]);
+    expect(await finish(pool, last, success)).toBe(false);
+  });
+  it('lets exactly one of two concurrent replays proceed', async () => {
+    await endpoint();
+    await publish();
+    const { id } = (
+      await pool.query("UPDATE deliveries SET status='failed' RETURNING id")
+    ).rows[0];
+    const results = await Promise.allSettled([
+      service.replay(id, actor),
+      service.replay(id, actor),
+    ]);
+    expect(results.map((r) => r.status).sort()).toEqual([
+      'fulfilled',
+      'rejected',
+    ]);
+    expect(results.find((r) => r.status === 'rejected')?.reason).toMatchObject({
+      status: 409,
+    });
+    expect(
+      (
+        await pool.query(
+          "SELECT 1 FROM audit_log WHERE action='delivery.replayed'",
+        )
+      ).rowCount,
+    ).toBe(1);
+  });
+  it('records an in-flight result after the endpoint is disabled', async () => {
+    const ep = await endpoint();
+    await publish();
+    const job = await getJob();
+    await service.updateEndpoint(ep.id, { enabled: false }, actor);
+    expect(await finish(pool, job, success)).toBe(true);
+    expect((await pool.query('SELECT status FROM deliveries')).rows).toEqual([
+      { status: 'succeeded' },
+    ]);
+  });
+  it('keeps the original error and discards a connection broken mid-transaction', async () => {
+    await expect(
+      transaction(pool, async (c) => {
+        const { pid } = (await c.query('SELECT pg_backend_pid() AS pid'))
+          .rows[0];
+        await root.query('SELECT pg_terminate_backend($1)', [pid]);
+        await waitFor(
+          async () =>
+            !(
+              await root.query('SELECT 1 FROM pg_stat_activity WHERE pid=$1', [
+                pid,
+              ])
+            ).rowCount,
+        );
+        await new Promise((r) => setTimeout(r, 50));
+        throw new Error('Original failure');
+      }),
+    ).rejects.toThrow('Original failure');
+    expect((await pool.query('SELECT 1 AS ok')).rows).toEqual([{ ok: 1 }]);
+  });
+  it('keeps a known outcome through a temporary database outage', async () => {
+    // A TCP proxy between the worker and PostgreSQL simulates a real network outage.
+    const target = new URL(base);
+    const sockets = new Set<Socket>();
+    let up = true;
+    const proxy = createTcpServer((client) => {
+      if (!up) return client.destroy();
+      const upstream = connect(Number(target.port || 5432), target.hostname);
+      for (const s of [client, upstream]) {
+        sockets.add(s);
+        s.on('error', () => {});
+        s.on('close', () => {
+          sockets.delete(s);
+          client.destroy();
+          upstream.destroy();
+        });
+      }
+      client.pipe(upstream).pipe(client);
+    });
+    await new Promise<void>((r) => proxy.listen(0, '127.0.0.1', r));
+    const proxied = new URL(schemaUrl);
+    proxied.hostname = '127.0.0.1';
+    proxied.port = String((proxy.address() as { port: number }).port);
+    const outagePool = createPool(proxied.toString());
+    outagePool.on('error', () => {});
+    const { server, url } = await receiver((_req, res) => {
+      up = false;
+      for (const s of sockets) s.destroy();
+      res.writeHead(204).end();
+      setTimeout(() => {
+        up = true;
+      }, 1500);
+    });
+    const worker = new Worker(outagePool, config, app.log);
+    try {
+      const ep = await endpoint();
+      await service.updateEndpoint(ep.id, { url }, actor);
+      await publish();
+      worker.start(1);
+      await waitFor(
+        async () =>
+          (
+            await pool.query(
+              "SELECT 1 FROM deliveries WHERE status='succeeded'",
+            )
+          ).rowCount === 1,
+      );
+      expect((await pool.query('SELECT status FROM attempts')).rows).toEqual([
+        { status: 'succeeded' },
+      ]);
+    } finally {
+      up = true;
+      await worker.stop();
+      await outagePool.end();
+      await closeReceiver(server);
+      await new Promise<void>((r) => proxy.close(() => r()));
+    }
+  });
+  it('recovers the lease of a worker process killed mid-delivery', async () => {
+    let arrived!: () => void;
+    const delivered = new Promise<void>((r) => {
+      arrived = r;
+    });
+    const { server, url } = await receiver(() => arrived());
+    const ep = await endpoint();
+    await service.updateEndpoint(ep.id, { url }, actor);
+    await publish();
+    const child = spawn(
+      process.execPath,
+      ['--import', 'tsx', 'tests/fixtures/worker-process.ts'],
+      {
+        env: {
+          ...process.env,
+          DATABASE_URL: schemaUrl,
+          SECRET_ENCRYPTION_KEY: 'ab'.repeat(32),
+          ALLOW_PRIVATE_DESTINATIONS: 'true',
+        },
+        stdio: 'ignore',
+      },
+    );
+    const exited = once(child, 'exit');
+    try {
+      await delivered;
+      child.kill('SIGKILL');
+      await exited;
+      expect((await pool.query('SELECT status FROM deliveries')).rows).toEqual([
+        { status: 'in_flight' },
+      ]);
+      // Only the 60-second lease wait is shortened; the process death is real.
+      await pool.query(
+        "UPDATE deliveries SET lease_until=now()-interval '1 second'",
+      );
+      const job = await getJob();
+      expect(job.attempt_count).toBe(2);
+      expect(await finish(pool, job, success)).toBe(true);
+      expect(
+        (await pool.query('SELECT status FROM attempts ORDER BY number')).rows,
+      ).toEqual([{ status: 'unknown' }, { status: 'succeeded' }]);
+    } finally {
+      if (child.exitCode === null && child.signalCode === null)
+        child.kill('SIGKILL');
+      await closeReceiver(server);
+    }
+  }, 30000);
 });
 it('transaction helper rolls back arbitrary state changes', async () => {
   await expect(

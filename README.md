@@ -80,7 +80,7 @@ tests/                security/HTTP tests and real PostgreSQL integration tests
 examples/receiver.ts   fictional receiver with demo-only in-memory deduplication
 ```
 
-Tests create a unique temporary schema in the database selected by `TEST_DATABASE_URL` and remove that schema afterward. The role must have schema-creation permission. The local default is the Compose database at `localhost:55432`; no tests contact Neon or external receivers.
+Tests create a unique temporary schema in the database selected by `TEST_DATABASE_URL` and remove that schema afterward. The role must have schema-creation permission. The local default is the Compose database at `localhost:55432`; no tests contact Neon or external receivers. The HTTPS tests generate throwaway certificates with the `openssl` CLI and are reported as skipped when it is not on `PATH`.
 
 ```sh
 pnpm lint

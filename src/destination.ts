@@ -5,7 +5,11 @@ import ipaddr from 'ipaddr.js';
 export function isPublic(address: string): boolean {
   try {
     const parsed = ipaddr.process(address);
-    return parsed.range() === 'unicast';
+    // ipaddr.js labels unallocated IPv6 and IPv4-compatible (::/96) addresses unicast; require 2000::/3.
+    return (
+      parsed.range() === 'unicast' &&
+      (parsed.kind() === 'ipv4' || parsed.match(ipaddr.IPv6.parse('2000::'), 3))
+    );
   } catch {
     return false;
   }

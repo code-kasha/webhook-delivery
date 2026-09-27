@@ -52,11 +52,7 @@ export async function lockEndpoint(c: Client, id: string) {
     [id],
   );
   if (!result.rowCount) throw new ApiError(404, 'Endpoint not found');
-  return result.rows[0] as {
-    id: string;
-    secret: string;
-    previous_expires_at: Date | null;
-  };
+  return result.rows[0] as { id: string };
 }
 export class Service {
   constructor(
@@ -103,21 +99,19 @@ export class Service {
   }
   async rotate(id: string, actor: string) {
     return transaction(this.pool, async (c) => {
-      const endpoint = await lockEndpoint(c, id);
-      if (
-        endpoint.previous_expires_at &&
-        endpoint.previous_expires_at.getTime() > Date.now()
-      )
-        throw new ApiError(409, 'A secret rotation overlap is already active');
+      await lockEndpoint(c, id);
       const secret = newSecret();
+      // The database clock decides whether the overlap is still active.
       const result = await c.query(
-        "UPDATE endpoints SET previous_secret=secret, previous_expires_at=now()+$2*interval '1 second', secret=$3 WHERE id=$1 RETURNING previous_expires_at",
+        "UPDATE endpoints SET previous_secret=secret, previous_expires_at=now()+$2*interval '1 second', secret=$3 WHERE id=$1 AND (previous_expires_at IS NULL OR previous_expires_at<=now()) RETURNING previous_expires_at",
         [
           id,
           policy.rotationSeconds,
           encrypt(secret, this.config.SECRET_ENCRYPTION_KEY),
         ],
       );
+      if (!result.rowCount)
+        throw new ApiError(409, 'A secret rotation overlap is already active');
       await audit(c, 'endpoint.secret_rotated', id, actor);
       return {
         secret,

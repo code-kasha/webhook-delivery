@@ -5,6 +5,8 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 FROM dependencies AS test
+# The HTTPS tests generate throwaway certificates with the OpenSSL CLI.
+RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
 COPY . .
 CMD ["pnpm", "test"]
 
