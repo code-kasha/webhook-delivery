@@ -33,7 +33,7 @@ Checks after the fixes:
 - Linux `test` image, Node 22.23.3, OpenSSL 3.0.22, PostgreSQL 17.11: 85 passed, none skipped. The test stage now installs the OpenSSL CLI.
 - Rebuilt amd64 runtime image: migrations applied, `scripts/smoke.mjs` passed, UID 1000, `docker stop` exit code 0, no error-level log lines.
 
-At the end of task 1, Node 24, arm64 and browser verification were outstanding. They were subsequently checked below. GitHub Actions results are recorded at the end of this file; release publication, hosted deployment, public DNS/TLS receivers and load performance remain unverified.
+At the end of task 1, Node 24, arm64 and browser verification were outstanding. They were subsequently checked below, followed by GitHub Actions and hosted deployment. Release publication and load performance remain unverified.
 
 ## Runtime matrix and reviewer walkthrough — 27 September 2026
 
@@ -70,7 +70,7 @@ Both paths used the bundled receiver (native loopback; Docker Desktop via `host.
 
 ### Controlled database TLS
 
-A separate PostgreSQL 17 container used an OpenSSL-generated, short-lived self-signed CA/server certificate with DNS SAN `tls-db`. The application `createPool` used `sslmode=verify-full&sslrootcert=/certs/server.crt` against that network alias. Migration and a query of `pg_stat_ssl` succeeded with `ssl=true`, `version=TLSv1.3`. Removing the trusted CA failed with `DEPTH_ZERO_SELF_SIGNED_CERT`; connecting through a different hostname failed with `ERR_TLS_CERT_ALTNAME_INVALID`; connecting to the plaintext development server with verification required failed with “The server does not support SSL connections”. No certificate verification was disabled. Certificates/keys stayed out of Git. [Deployment](deployment.md#database-tls) records the URL and mount configuration; actual Neon verification remains outstanding.
+A separate PostgreSQL 17 container used an OpenSSL-generated, short-lived self-signed CA/server certificate with DNS SAN `tls-db`. The application `createPool` used `sslmode=verify-full&sslrootcert=/certs/server.crt` against that network alias. Migration and a query of `pg_stat_ssl` succeeded with `ssl=true`, `version=TLSv1.3`. Removing the trusted CA failed with `DEPTH_ZERO_SELF_SIGNED_CERT`; connecting through a different hostname failed with `ERR_TLS_CERT_ALTNAME_INVALID`; connecting to the plaintext development server with verification required failed with “The server does not support SSL connections”. No certificate verification was disabled. Certificates/keys stayed out of Git. [Deployment](deployment.md#database-tls) records the URL and mount configuration; actual Neon verification is recorded below.
 
 ### Swagger and documentation
 
@@ -91,4 +91,16 @@ At Akash's request to perform task 4, created public [code-kasha/webhook-deliver
 
 Reviewed tracked paths and credential patterns in Git history before pushing; no private artifacts, environment files or live credential matches were found. Repository Actions default permissions are read-only and pull-request approval is disabled; workflow checks also use `contents: read`. Only tag-gated publishing jobs request package/release write permissions. The repository's Actions secret list is empty. Fixed credentials in Compose/CI are disposable development fixtures, not a deployed admin key. This is a targeted review, not a formal secret-scanner certification.
 
-The main-branch badge endpoint returned HTTP 200 and reports passing. Added that real badge and corrected the README's old local-only status in a follow-up documentation commit prepared locally, pending separate authorization to push it.
+The main-branch badge endpoint returned HTTP 200 and reports passing. Akash separately authorized the follow-up badge/documentation push at `74bfac0`. [CI run 36322213120](https://github.com/code-kasha/webhook-delivery/actions/runs/36322213120) passed the same checks, including all 85 tests on each Node version and the Node 22 container smoke; publication jobs remained skipped.
+
+## Hosted demo — 28 September 2026 (IST)
+
+Task 5 used authenticated Neon CLI 6.2.3 and Render CLI 2.28.0 with Akash's deployment authorization. Dedicated free resources were created; unrelated account resources were not modified. Both Render services deployed commit `74bfac0` in Singapore with automatic deployment disabled. No application source changes were required.
+
+- Dedicated Neon PostgreSQL 17 database: migrations and admin/publish-only key creation succeeded. The application's `createPool` with `sslmode=verify-full` reported an encrypted, authorized TLS 1.3 client socket. The proxy-terminated backend's `pg_stat_ssl` was false; it is not proof of the client connection's TLS state. The deployed API uses the same verified URL.
+- [Public API](https://webhook-delivery-demo.onrender.com/docs): `SMOKE_URL` targeting the hosted API with `node scripts/smoke.mjs` passed liveness, readiness, Swagger assets, OpenAPI and unauthenticated-request rejection.
+- Published a fictional `demo.lead_created` event to the controlled HTTPS receiver. It succeeded on its first attempt with HTTP 204. Reusing the idempotency key returned the same event with `duplicate: true`.
+- A publish-only key was refused endpoint administration (403); registration of `http://127.0.0.1:4000` was refused (400), with private destinations disabled. Unsigned and invalid-signature receiver requests returned 401.
+- Disabled the endpoint, published another event and verified a pending job with zero attempts. Issued a real Render API restart. Provider logs showed a replacement instance listening and the old instance draining. The original API keys, event and attempt history remained valid and unchanged; the queued delivery retained its ID. Re-enabling the endpoint delivered it with HTTP 204, also verifying that the encrypted signing secret survived the restart.
+
+Both provider deployments reported live. Credentials and detailed test evidence remain outside the repository. This is controlled functional verification, not a load test, backup restore test or observation of a full idle sleep/wake cycle. Sleep behavior and free-tier limitations follow the [provider documentation](https://render.com/docs/free). The receiver has only demo-level in-memory deduplication. Planned manual retirement is 28 December 2026; no release date has been claimed.

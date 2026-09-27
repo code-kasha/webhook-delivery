@@ -55,7 +55,7 @@ For a private/provider CA, append `&sslrootcert=/run/certs/database-ca.pem`. Mou
 
 The locked driver's `require` mode currently aliases full verification but warns that future major versions change its semantics. Explicit `verify-full` avoids that ambiguity. The service configures TLS through the URL only; node-postgres warns that URL TLS options overwrite a separately supplied `ssl` object. See [node-postgres TLS](https://node-postgres.com/features/ssl) and its [connection-string options](https://github.com/brianc/node-postgres/blob/master/packages/pg-connection-string/README.md).
 
-For the planned Neon deployment, copy the actual database hostname/credentials from its connection dialog and explicitly choose `sslmode=verify-full` for this TCP `pg` driver. Use the provider's current CA guidance if a custom trust file is required; do not copy psql-specific trust shortcuts into this Node application. Neon discusses hostname/CA verification in its [TLS guidance](https://neon.com/blog/avoid-mitm-attacks-with-psql-postgres-16). No Neon connection has been tested yet.
+For Neon, use the actual database hostname/credentials and explicitly choose `sslmode=verify-full` for this TCP `pg` driver. Use the provider's current CA guidance if a custom trust file is required; do not copy psql-specific trust shortcuts into this Node application. Neon discusses hostname/CA verification in its [TLS guidance](https://neon.com/blog/avoid-mitm-attacks-with-psql-postgres-16). The demo connection was verified through the application's `createPool`: the client socket reported encrypted, authorized TLS 1.3. Neon's proxy terminates client TLS; the backend `pg_stat_ssl` row reported false and was not used as evidence of client encryption.
 
 A controlled PostgreSQL 17 instance was tested locally with a generated certificate: migrations and queries used TLS 1.3; untrusted CA, hostname mismatch and a non-TLS server were all rejected. This verifies the configuration path, not a hosted provider. The bundled development Compose database uses plaintext on its local network; its hardcoded URL is not a production TLS example.
 
@@ -74,13 +74,21 @@ Public `/docs` and `/openapi.json` disclose the contract, not customer data. Pro
 - There is no automatic data retention. Monitor event, delivery and attempt table sizes and PostgreSQL disk capacity. Removing events also changes the idempotency guarantee, so define your retention policy before adding cleanup.
 - Keep clocks synchronized for receiver timestamp verification.
 
-## Planned Render + Neon demo
+## Render + Neon demo
 
-No hosted demo exists yet. After an explicit deployment request, create a Render Docker web service and a dedicated Neon PostgreSQL database. Set the encrypted-secret key, database URL and `HOST=0.0.0.0`, apply migrations, create private admin and publish-only credentials, and use `/ready` as the health check. Test database TLS with the actual provider configuration before claiming it works.
+Deployed and verified on 28 September 2026 (IST), from commit `74bfac0`:
+
+- [API / Swagger UI](https://webhook-delivery-demo.onrender.com/docs): Render Free Docker web service in Singapore, `HOST=0.0.0.0`, `PORT=10000`, `/ready` health check and `ALLOW_PRIVATE_DESTINATIONS=false`.
+- Dedicated Neon Free PostgreSQL 17 project in AWS Singapore, fixed 0.25 CU, with a `sslmode=verify-full` connection URL. Migrations and private admin/publish-only keys were created locally using the documented CLI before API startup.
+- [Controlled receiver](https://webhook-delivery-receiver.onrender.com): separate Render Free Node 22.23.2 service from the same commit. Build: `pnpm install --frozen-lockfile --prod=false`; start: `pnpm receiver`. Set `RECEIVER_HOST=0.0.0.0`, `PORT=4000`, `NODE_VERSION=22.23.2`, and the registered endpoint's signing secret as private `WEBHOOK_SECRET`. Use TCP health checks because unsigned HTTP requests correctly return 401. Its deduplication is in memory and it performs no business actions.
+
+Both services have automatic deployment disabled. Database credentials, the encryption key, API keys and signing secret are private; no public publishing key is offered. The operator registered only the controlled receiver and sent fictional `demo.lead_created` events. Readiness, Swagger assets, authentication/scope rejection, private-destination rejection, idempotency, signed HTTPS delivery and retained state across an actual Render API restart passed; see [verification](verification.md#hosted-demo--28-september-2026-ist).
 
 Render's [free web services](https://render.com/docs/free) spin down after 15 minutes without inbound traffic. While this process sleeps, its delivery worker also stops; persisted jobs resume when the service wakes. Therefore a free demo cannot demonstrate continuously scheduled retry timing during idle periods. Use always-on compute for installations needing timely background delivery.
 
-The public demo should show docs and controlled fictional traffic, with private admin credentials and a controlled receiver. Do not expose an unrestricted public publishing or admin key. State the exact end date in the README, approximately three months after the actual release date; do not invent a release date now. This setup and its spending/free-tier limits must be verified when deployment is requested.
+The receiver can also sleep, so a cold start can delay a delivery or cause a bounded attempt to time out. No keepalive automation is configured. Render's 750 free instance hours are shared across the workspace, including other services; bandwidth/build allowances also apply. Free services do not support the requested custom shutdown delay, so this demo uses Render's default; restart logs showed the old process draining and a replacement starting.
+
+Planned retirement is **28 December 2026**, three months after this deployment. No release date is implied; reconcile the date with the actual v1.0.0 release during task 6. Retirement is manual, not a scheduled deletion: remove the two dedicated demo services and dedicated Neon project, then update these links. Do not remove unrelated workspace resources.
 
 ## Publishing
 

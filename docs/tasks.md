@@ -1,6 +1,6 @@
 # Next tasks toward v1.0.0
 
-Updated 27 September 2026. These are small handoff units, suitable for separate threads/models. Read `AGENTS.md` and the private `../webhook-delivery-notes/agent-start.md` before starting. Work locally; remote actions need an explicit request in that message.
+Updated 28 September 2026. These are small handoff units, suitable for separate threads/models. Read `AGENTS.md` and the private `../webhook-delivery-notes/agent-start.md` before starting. Work locally; remote actions need an explicit request in that message.
 
 ## Completed baseline
 
@@ -46,15 +46,15 @@ Completed locally on 27 September 2026 using connected Brave and native/Compose 
 - [x] Inspect actual GitHub Actions results (Node 22/24, PostgreSQL, container smoke, OpenAPI check); fix failures locally and request authorization for any additional push.
 - [x] Add the working CI badge. Review permissions and secrets; no public admin key.
 
-The [public repository](https://github.com/code-kasha/webhook-delivery) and [successful CI run](https://github.com/code-kasha/webhook-delivery/actions/runs/36322054815) were verified on 27 September 2026 for commit `961b3da`. Both Node versions passed all 85 tests; no fixes were needed. The badge and this documentation update are prepared locally; publishing that follow-up commit requires separate push authorization. Task 5 remains gated on an explicit deployment request.
+The [public repository](https://github.com/code-kasha/webhook-delivery) and [successful CI run](https://github.com/code-kasha/webhook-delivery/actions/runs/36322054815) were verified on 27 September 2026 for commit `961b3da`. Both Node versions passed all 85 tests; no fixes were needed. Akash separately authorized the badge/documentation push at `74bfac0`; its [CI run](https://github.com/code-kasha/webhook-delivery/actions/runs/36322213120) also passed.
 
 ## 5. Set up the controlled live demo — only when requested
 
-- [ ] Deploy on Render with a dedicated Neon database; verify TLS, migrations, readiness, restart recovery and a controlled fictional receiver.
-- [ ] Keep admin credentials private and avoid turning the demo into an unrestricted outbound-request service.
-- [ ] State the verified demo URL, sleeping-worker limitation and exact end date, roughly three months after the actual release date.
+- [x] Deploy on Render with a dedicated Neon database; verify TLS, migrations, readiness, restart recovery and a controlled fictional receiver.
+- [x] Keep admin credentials private and avoid turning the demo into an unrestricted outbound-request service.
+- [x] State the verified demo URL, sleeping-worker limitation and exact planned end date. Reconcile that date with the actual release in task 6.
 
-**Done when:** the deployed behavior is verified and documented; no hypothetical URL/date appears as live.
+Completed 28 September 2026 (IST), following deployment authorization. [Live Swagger](https://webhook-delivery-demo.onrender.com/docs), [configuration](deployment.md#render--neon-demo) and [observed results](verification.md#hosted-demo--28-september-2026-ist). Planned manual retirement is 28 December 2026; v1.0.0 has not been released.
 
 ## 6. Prepare and publish v1.0.0 — publication only when requested
 

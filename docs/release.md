@@ -11,7 +11,7 @@ This is a public, unreleased project. Remote actions require Akash's explicit re
 - Confirm the repository remains MIT licensed and the final Credits paragraph is intact.
 - When authorized, create the public `code-kasha/webhook-delivery` repository, push the reviewed commit, and inspect the actual GitHub Actions results. Add working CI/release/image badges only when the targets exist.
 - On separate explicit authorization as needed, publish the version tag, verify both architectures' image manifests and release assets/checksums, and make the GHCR package public.
-- Deploy and verify the controlled fictional Render/Neon demo when asked; disclose sleeping-worker limits and its actual end date, roughly three months after release. Add the working demo URL to the README.
+- The controlled Render/Neon demo is deployed and verified; see [deployment](deployment.md#render--neon-demo). Reconcile its planned 28 December 2026 retirement with the actual release date, aiming for roughly three months after release. Keep the README URL and sleeping-worker disclosure current.
 - After the release is complete, set the README status to “complete as of v1.0.0 and not actively maintained” as requested by Akash.
 
 ## Akash's post-shipping tasks — do only when asked
