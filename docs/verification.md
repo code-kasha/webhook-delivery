@@ -33,4 +33,47 @@ Checks after the fixes:
 - Linux `test` image, Node 22.23.3, OpenSSL 3.0.22, PostgreSQL 17.11: 85 passed, none skipped. The test stage now installs the OpenSSL CLI.
 - Rebuilt amd64 runtime image: migrations applied, `scripts/smoke.mjs` passed, UID 1000, `docker stop` exit code 0, no error-level log lines.
 
-Not yet verified: Node 24, arm64 execution, actual GitHub Actions execution, published multi-arch manifests/release assets, hosted demo, public DNS/TLS receivers (HTTPS is verified only against a local generated CA), performance under load, and visual Swagger rendering/screenshot. The session had no connected browser, although HTTP checks confirmed the Swagger page/assets and generated schema are served. [Next tasks](tasks.md) separates review, remaining verification and release work. See the private handoff for the latest session state.
+At the end of task 1, Node 24, arm64 and browser verification were outstanding. They were subsequently checked below. GitHub Actions, publication, hosted deployment, public DNS/TLS receivers and load performance remain unverified.
+
+## Runtime matrix and reviewer walkthrough — 27 September 2026
+
+Tasks 2 and 3 ran locally; nothing was pushed, published or deployed.
+
+| Environment                                               | Actual result                                                                                                                           |
+| --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Linux amd64, Node 24.21.0, pnpm 10.17.1, PostgreSQL 17.11 | All 85 tests passed (56 security/HTTP, 2 HTTPS, 27 integration), no skips; lint, typecheck, build and OpenAPI freshness passed          |
+| Windows, Node 26.3.0                                      | Frozen-lockfile install, lint, typecheck, build and schema freshness passed; native CLI/API/receiver walkthrough passed                 |
+| Linux arm64, Node 22.23.3                                 | Built and executed with Docker Desktop emulation on an amd64 host; migration, runtime smoke and UID 1000 verified; graceful stop exit 0 |
+| Linux amd64, Node 22.23.3, PostgreSQL 17.11               | Fresh Compose build/start/migration/key creation, runtime smoke and receiver walkthrough passed                                         |
+
+The Dockerfile accepts `--build-arg NODE_VERSION=24`; the default runtime remains Node 22. The arm64 result is emulated execution, not a physical ARM benchmark or a published multi-architecture manifest. Commands used for the matrix:
+
+```sh
+docker build --build-arg NODE_VERSION=24 --target test -t webhook-delivery:test24 .
+docker run --rm --network webhook-verification_default -e TEST_DATABASE_URL=postgresql://webhook:webhook@db:5432/webhook webhook-delivery:test24 sh -c 'pnpm typecheck && pnpm test && pnpm build && pnpm openapi:check'
+docker run --rm webhook-delivery:test24 pnpm lint
+docker buildx build --platform linux/arm64 --load -t webhook-delivery:arm64 .
+```
+
+The arm64 runtime was run with `--platform linux/arm64`, a generated encryption key, the local PostgreSQL network and host port 3001. `SMOKE_URL=http://127.0.0.1:3001 node scripts/smoke.mjs` passed; `process.arch` reported `arm64`. The final Compose amd64 service at port 3000 passed the same smoke script.
+
+### Clean quick starts and operator sequence
+
+Native: generated a fresh `.env` from `.env.example`, used a newly created `webhook_native_verify` database, ran the README frozen install, env-file migration/key commands, build and native Node server. The existing PostgreSQL server for this native application check was the local PostgreSQL 17 container, not a hosted provider. Compose: generated another fresh `.env` and encryption key, ran `docker compose -p webhook-verification up --build -d` with a newly created project volume, then the documented container CLI key command. The project name isolated this run from the earlier development data; no service configuration override was needed.
+
+Both paths used the bundled receiver (native loopback; Docker Desktop via `host.docker.internal` with `RECEIVER_HOST=0.0.0.0`). Both produced real signed HTTP deliveries acknowledged with 204. An isolated HTTP harness then exercised the [documented operator sequence](walkthrough.md):
+
+- Register, publish, inspect the succeeded attempt and its response code.
+- Disable, publish a retained event, restart the native process or run Compose `down`/`up` without deleting the volume. The original API key, event/attempt history, encrypted signing secret and queued event survived; re-enabling delivered the queued event.
+- Rotate and verify the raw payload independently against both old and new secrets during overlap.
+- Return real HTTP 503 responses from a controlled local receiver; observe automatic pause at five attempts, re-enable, wait through real backoff to failure at eight, then restore 204 and replay. Both runs preserved event/delivery IDs and nine lifetime attempt records with one attempt in the new cycle. No SQL timestamps or counters were changed to accelerate this sequence.
+
+### Controlled database TLS
+
+A separate PostgreSQL 17 container used an OpenSSL-generated, short-lived self-signed CA/server certificate with DNS SAN `tls-db`. The application `createPool` used `sslmode=verify-full&sslrootcert=/certs/server.crt` against that network alias. Migration and a query of `pg_stat_ssl` succeeded with `ssl=true`, `version=TLSv1.3`. Removing the trusted CA failed with `DEPTH_ZERO_SELF_SIGNED_CERT`; connecting through a different hostname failed with `ERR_TLS_CERT_ALTNAME_INVALID`; connecting to the plaintext development server with verification required failed with “The server does not support SSL connections”. No certificate verification was disabled. Certificates/keys stayed out of Git. [Deployment](deployment.md#database-tls) records the URL and mount configuration; actual Neon verification remains outstanding.
+
+### Swagger and documentation
+
+Connected Brave rendered `/docs` with the local CSS/JS, route groups, authorization dialog and request forms. Live readiness showed 200 with `{"ok":true}`; an unauthenticated delivery query showed 401. The real 1905×854 overview screenshot is [swagger.png](images/swagger.png), referenced in the README without credentials. Added explicit fictional Zod examples after observing random regex-generated sample text in Swagger. Generated OpenAPI remains the contract source's output.
+
+Reviewed README/API/design/deployment/receiver/release docs for at-least-once semantics, no ordering guarantee, eight-attempt budget versus five-failure pause, separate replay/resume and sleeping-worker behavior. Credits remain byte-for-byte unchanged. Local Markdown file links were checked. No live demo URL, release badge or published-image claim was added.

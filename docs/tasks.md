@@ -25,20 +25,20 @@ Completed 27 September 2026; findings, fixes and check results are in [verificat
 
 ## 2. Verify the supported runtime and container matrix
 
-- [ ] Run the full suite under Node 24 (22 and local 26 have already run).
-- [ ] Build and smoke test a Linux arm64 image locally; the workflow specifies it, but it has not been exercised.
-- [ ] Re-run the exact README native and Compose quick starts from clean configuration, including key creation, real receiver delivery and persistence across restart.
-- [ ] Check database TLS with a controlled configuration and document any provider-specific setup.
+- [x] Run the full suite under Node 24 (22 and local 26 have already run).
+- [x] Build and smoke test a Linux arm64 image locally; verified under Docker Desktop emulation, not physical ARM hardware.
+- [x] Re-run the README native and Compose quick starts from clean configuration, including key creation, real receiver delivery and persistence across restart.
+- [x] Check database TLS with a controlled configuration and document any provider-specific setup.
 
-**Done when:** each tested runtime/architecture and command path is recorded with actual results; no simulated published-image claims. Start here next.
+Completed locally on 27 September 2026. Runtime versions, commands and limits are recorded in [verification](verification.md); provider deployment remains task 5.
 
 ## 3. Finish API presentation and reviewer documentation
 
-- [ ] Connect a browser, visually check Swagger UI, and capture a real screenshot under `docs/images/` for the README. The current session had no connected browser.
-- [ ] Walk through register → publish → inspect attempt → rotate → pause/resume → replay using Swagger or documented commands.
-- [ ] Review the README and docs for consistency, especially at-least-once delivery, eight attempts versus five-failure pause, and the free demo's sleeping worker.
+- [x] Connect a browser, visually check Swagger UI, and capture a real screenshot under `docs/images/` for the README.
+- [x] Walk through register → publish → inspect attempt → rotate → pause/resume → replay and document the commands.
+- [x] Review the README and docs for consistency, especially at-least-once delivery, eight attempts versus five-failure pause, and the free demo's sleeping worker.
 
-**Done when:** screenshot and walkthrough match the running service, all links and claims are reviewable, and the Credits paragraph remains exact.
+Completed locally on 27 September 2026 using connected Brave and native/Compose HTTP walkthroughs. See [walkthrough](walkthrough.md) and [verification](verification.md). The Credits paragraph is unchanged. Next is task 4, only on an explicit request for remote actions.
 
 ## 4. Create the public repository and verify CI — only when requested
 

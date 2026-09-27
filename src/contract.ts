@@ -13,16 +13,21 @@ const types = z
   .max(100)
   .refine((v) => new Set(v).size === v.length, 'Event types must be unique');
 export const endpointInput = z.strictObject({
-  url: z.url().max(2048),
-  event_types: types,
+  url: z.url().max(2048).openapi({ example: 'https://receiver.example/hooks' }),
+  event_types: types.openapi({ example: ['lead.created'] }),
 });
 export const endpointPatch = endpointInput
   .partial()
   .extend({ enabled: z.boolean().optional() })
   .refine((v) => Object.keys(v).length > 0, 'Provide at least one field');
 export const eventInput = z.strictObject({
-  type: z.string().regex(/^[a-zA-Z0-9_.-]{1,100}$/),
-  data: z.record(z.string(), z.unknown()),
+  type: z
+    .string()
+    .regex(/^[a-zA-Z0-9_.-]{1,100}$/)
+    .openapi({ example: 'lead.created' }),
+  data: z
+    .record(z.string(), z.unknown())
+    .openapi({ example: { name: 'Fictional Customer' } }),
 });
 export const keyInput = z.strictObject({
   name: z.string().min(1).max(100),
@@ -79,7 +84,8 @@ export const publishHeaders = z.object({
     .string()
     .min(1)
     .max(200)
-    .regex(/^[\x21-\x7e]+$/),
+    .regex(/^[\x21-\x7e]+$/)
+    .openapi({ example: 'fictional-lead-001' }),
 });
 const ok = z.object({ ok: z.boolean() });
 export interface RouteSpec {

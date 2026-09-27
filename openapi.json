@@ -260,7 +260,8 @@
                   "url": {
                     "type": "string",
                     "maxLength": 2048,
-                    "format": "uri"
+                    "format": "uri",
+                    "example": "https://receiver.example/hooks"
                   },
                   "event_types": {
                     "type": "array",
@@ -269,7 +270,10 @@
                       "pattern": "^[a-zA-Z0-9_.-]{1,100}$"
                     },
                     "minItems": 1,
-                    "maxItems": 100
+                    "maxItems": 100,
+                    "example": [
+                      "lead.created"
+                    ]
                   }
                 },
                 "required": [
@@ -705,7 +709,8 @@
                   "url": {
                     "type": "string",
                     "maxLength": 2048,
-                    "format": "uri"
+                    "format": "uri",
+                    "example": "https://receiver.example/hooks"
                   },
                   "event_types": {
                     "type": "array",
@@ -714,7 +719,10 @@
                       "pattern": "^[a-zA-Z0-9_.-]{1,100}$"
                     },
                     "minItems": 1,
-                    "maxItems": 100
+                    "maxItems": 100,
+                    "example": [
+                      "lead.created"
+                    ]
                   },
                   "enabled": {
                     "type": "boolean"
@@ -1102,7 +1110,8 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 200,
-              "pattern": "^[\\x21-\\x7e]+$"
+              "pattern": "^[\\x21-\\x7e]+$",
+              "example": "fictional-lead-001"
             },
             "required": true,
             "name": "idempotency-key",
@@ -1118,12 +1127,16 @@
                 "properties": {
                   "type": {
                     "type": "string",
-                    "pattern": "^[a-zA-Z0-9_.-]{1,100}$"
+                    "pattern": "^[a-zA-Z0-9_.-]{1,100}$",
+                    "example": "lead.created"
                   },
                   "data": {
                     "type": "object",
                     "additionalProperties": {
                       "nullable": true
+                    },
+                    "example": {
+                      "name": "Fictional Customer"
                     }
                   }
                 },

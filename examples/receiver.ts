@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import { verify } from '../src/verify.js';
 const secret = process.env.WEBHOOK_SECRET;
+const host = process.env.RECEIVER_HOST ?? '127.0.0.1';
 if (!secret)
   throw new Error('Set WEBHOOK_SECRET to the endpoint signing secret');
 // Demo deduplication only. Real applications must atomically store event IDs and business changes in their database.
@@ -39,6 +40,6 @@ createServer(async (req, res) => {
   } catch {
     res.writeHead(400).end();
   }
-}).listen(4000, '127.0.0.1', () =>
-  console.log('Fictional receiver listening on http://127.0.0.1:4000'),
+}).listen(4000, host, () =>
+  console.log(`Fictional receiver listening on port 4000 (bind: ${host})`),
 );

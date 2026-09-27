@@ -4,16 +4,17 @@ The image runs the API and four worker loops in one Node process as user `node` 
 
 ## Configuration
 
-| Variable                     | Default / purpose                                                                 |
-| ---------------------------- | --------------------------------------------------------------------------------- |
-| `DATABASE_URL`               | Required PostgreSQL URL; role needs schema/table permissions for migrations       |
-| `SECRET_ENCRYPTION_KEY`      | Required 64 hex characters; encrypts signing secrets using AES-256-GCM            |
-| `HOST`                       | `127.0.0.1` natively; `0.0.0.0` in the image                                      |
-| `PORT`                       | `3000`; hosts may override it                                                     |
-| `ALLOW_PRIVATE_DESTINATIONS` | Literal `false`; explicit `true` permits private/loopback/link-local destinations |
-| `LOG_LEVEL`                  | `info`; `silent`, `fatal`, `error`, `warn`, `info`, `debug` supported             |
-| `TEST_DATABASE_URL`          | Tests only; defaults to the local Compose database                                |
-| `WEBHOOK_SECRET`             | Example receiver only; endpoint's signing secret                                  |
+| Variable                     | Default / purpose                                                                   |
+| ---------------------------- | ----------------------------------------------------------------------------------- |
+| `DATABASE_URL`               | Required PostgreSQL URL; role needs schema/table permissions for migrations         |
+| `SECRET_ENCRYPTION_KEY`      | Required 64 hex characters; encrypts signing secrets using AES-256-GCM              |
+| `HOST`                       | `127.0.0.1` natively; `0.0.0.0` in the image                                        |
+| `PORT`                       | `3000`; hosts may override it                                                       |
+| `ALLOW_PRIVATE_DESTINATIONS` | Literal `false`; explicit `true` permits private/loopback/link-local destinations   |
+| `LOG_LEVEL`                  | `info`; `silent`, `fatal`, `error`, `warn`, `info`, `debug` supported               |
+| `TEST_DATABASE_URL`          | Tests only; defaults to the local Compose database                                  |
+| `WEBHOOK_SECRET`             | Example receiver only; endpoint's signing secret                                    |
+| `RECEIVER_HOST`              | Example receiver only; `127.0.0.1`, explicitly set a reachable interface for Docker |
 
 Retry/timeout/rotation limits are named constants in `src/config.ts`; they are intentionally fixed for v1 and documented in [design](design.md). API keys are created through the CLI and stored hashed in PostgreSQL, not in environment variables. Do not print or collect key-command output in shared CI logs.
 
@@ -41,6 +42,24 @@ docker run --rm --network webhook-delivery_default -e TEST_DATABASE_URL=postgres
 ```
 
 ## HTTPS, credentials and network boundaries
+
+### Database TLS
+
+`createPool` passes `DATABASE_URL` to node-postgres without overriding its TLS options. Use `sslmode=verify-full` to verify both the certificate chain and database hostname:
+
+```text
+postgresql://APP_USER:URL_ENCODED_PASSWORD@db.example:5432/APP_DB?sslmode=verify-full
+```
+
+For a private/provider CA, append `&sslrootcert=/run/certs/database-ca.pem`. Mount the PEM file read-only into both the migration and API containers at that path, readable by UID 1000. Native Windows paths can use forward slashes, such as `C:/certs/database-ca.pem`; URL-encode spaces and other reserved characters. Use the certificate's DNS hostname, not its resolved IP. Do not use `sslmode=no-verify`, `NODE_TLS_REJECT_UNAUTHORIZED=0`, or a permissive compatibility mode.
+
+The locked driver's `require` mode currently aliases full verification but warns that future major versions change its semantics. Explicit `verify-full` avoids that ambiguity. The service configures TLS through the URL only; node-postgres warns that URL TLS options overwrite a separately supplied `ssl` object. See [node-postgres TLS](https://node-postgres.com/features/ssl) and its [connection-string options](https://github.com/brianc/node-postgres/blob/master/packages/pg-connection-string/README.md).
+
+For the planned Neon deployment, copy the actual database hostname/credentials from its connection dialog and explicitly choose `sslmode=verify-full` for this TCP `pg` driver. Use the provider's current CA guidance if a custom trust file is required; do not copy psql-specific trust shortcuts into this Node application. Neon discusses hostname/CA verification in its [TLS guidance](https://neon.com/blog/avoid-mitm-attacks-with-psql-postgres-16). No Neon connection has been tested yet.
+
+A controlled PostgreSQL 17 instance was tested locally with a generated certificate: migrations and queries used TLS 1.3; untrusted CA, hostname mismatch and a non-TLS server were all rejected. This verifies the configuration path, not a hosted provider. The bundled development Compose database uses plaintext on its local network; its hardcoded URL is not a production TLS example.
+
+### API edge and credentials
 
 Terminate HTTPS at Caddy/nginx or a platform edge, publish the API only behind it, and configure database TLS according to the database provider's documented CA settings. Do not disable certificate verification. This service does not trust forwarded client IP headers or implement per-user proxy rate limits; configure request-rate, connection and network access limits at the edge.
 

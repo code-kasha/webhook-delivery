@@ -1,4 +1,5 @@
-FROM node:22-bookworm-slim AS dependencies
+ARG NODE_VERSION=22
+FROM node:${NODE_VERSION}-bookworm-slim AS dependencies
 WORKDIR /app
 RUN npm install --global pnpm@10.17.1
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -15,7 +16,7 @@ COPY tsconfig*.json ./
 COPY src ./src
 RUN pnpm build && pnpm prune --prod
 
-FROM node:22-bookworm-slim
+FROM node:${NODE_VERSION}-bookworm-slim
 ENV NODE_ENV=production HOST=0.0.0.0
 WORKDIR /app
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
