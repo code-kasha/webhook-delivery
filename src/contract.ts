@@ -310,7 +310,7 @@ export function openapi(): ReturnType<OpenApiGeneratorV3['generateDocument']> {
     openapi: '3.0.3',
     info: {
       title: 'Webhook Delivery',
-      version: '0.1.0',
+      version: '1.0.0',
       description:
         'One organisation per install. At-least-once HTTP(S) delivery; no ordering guarantee. Fictional examples only.',
     },

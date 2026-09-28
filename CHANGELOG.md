@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.0.0 — 2026-09-28
 
-Initial implementation targeting v1.0.0:
+First release:
 
 - Endpoint subscriptions, pause/resume and overlapping signing-secret rotation.
 - Scoped API keys, idempotent event publishing and transactional fan-out.
@@ -20,4 +20,4 @@ Review fixes before release:
 - IPv6 destinations must be in global unicast `2000::/3`; unallocated and IPv4-compatible hex forms such as `::a00:1` were accepted.
 - Expiry of the final allowed claim now audits the resulting failure; the rotation overlap uses the database clock; AES-GCM tags must be 16 bytes.
 
-No release has been published. Move this entry to a dated version heading only when preparing an authorized release.
+Verified before release: 85 tests on Node 22 and 24 with PostgreSQL, container smoke checks, emulated arm64 execution, and controlled Render/Neon signed delivery and restart recovery. See `docs/verification.md` for evidence and limits.

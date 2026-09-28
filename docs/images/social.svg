@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+<title>Webhook Delivery</title><desc>Publish, queue, sign, deliver and retry. A self-hostable Node.js and TypeScript service backed by PostgreSQL.</desc>
+<rect width="1280" height="640" fill="#103e35"/><rect x="56" y="56" width="1168" height="528" rx="8" fill="#fff"/><path d="M64 56H72V584H64Q56 584 56 576V64Q56 56 64 56" fill="#198c73"/>
+<g font-family="Segoe UI,Arial,sans-serif"><text x="136" y="135" fill="#17816e" font-family="Consolas,monospace" font-weight="700" font-size="23" letter-spacing="1">PUBLISH → QUEUE → SIGN → DELIVER → RETRY</text>
+<text x="132" y="236" fill="#202020" font-weight="700" font-size="76">webhook-delivery</text>
+<text x="136" y="305" fill="#424242" font-size="29">Signed webhooks, durable retries</text><text x="136" y="349" fill="#424242" font-size="29">and a history of every delivery attempt.</text>
+<g fill="#f1f3f4" stroke="#cdd3d7" stroke-width="2"><rect x="136" y="474" width="211" height="54" rx="4"/><rect x="363" y="474" width="173" height="54" rx="4"/><rect x="552" y="474" width="196" height="54" rx="4"/><rect x="764" y="474" width="154" height="54" rx="4"/><rect x="934" y="474" width="205" height="54" rx="4"/></g>
+<g fill="#172124" font-weight="700" font-size="20"><text x="154" y="509">Node.js · TypeScript</text><text x="383" y="509">PostgreSQL</text><text x="572" y="509">HMAC signatures</text><text x="785" y="509">85 tests</text><text x="954" y="509">Docker · OpenAPI</text></g></g></svg>

@@ -64,7 +64,7 @@ export async function send(
               ...headers,
               'content-type': 'application/json',
               'content-length': Buffer.byteLength(body),
-              'user-agent': 'webhook-delivery/0.1.0',
+              'user-agent': 'webhook-delivery/1.0.0',
             },
           },
           (response) => {
