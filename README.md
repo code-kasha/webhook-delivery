@@ -11,7 +11,8 @@ A self-hostable Node.js and TypeScript service that accepts events from an appli
 
 ![Local Swagger UI showing endpoint registration, rotation and event publishing](docs/images/swagger.png)
 
-<!-- Add release/image badges after those resources exist. -->
+[![Release v1.0.0](https://img.shields.io/badge/release-v1.0.0-blue)](https://github.com/code-kasha/webhook-delivery/releases/tag/v1.0.0)
+[![GHCR](https://img.shields.io/badge/GHCR-amd64%20%7C%20arm64-2496ED?logo=docker&logoColor=white)](https://github.com/code-kasha/webhook-delivery/pkgs/container/webhook-delivery)
 
 - **Endpoints:** event subscriptions, disable/resume and signing-secret rotation with a 24-hour overlap.
 - **Publishing:** admin or publish-only API keys; concurrent requests with the same idempotency key create one event and one fan-out.
@@ -21,7 +22,7 @@ A self-hostable Node.js and TypeScript service that accepts events from an appli
 - **API contract:** Zod request schemas generate committed OpenAPI and locally served Swagger UI.
 - **Operations:** PostgreSQL leases recover interrupted work, process and database probes, JSON logs and graceful shutdown.
 
-> **Status:** public, unreleased implementation targeting v1.0.0. The [controlled demo / Swagger UI](https://webhook-delivery-demo.onrender.com/docs) is live; API credentials stay private. No release or published image exists yet. See the [next tasks](docs/tasks.md) and [release checklist](docs/release.md).
+> **Status:** complete as of v1.0.0 and not actively maintained. Released 28 September 2026 under MIT; free to fork and self-host. [Release assets](https://github.com/code-kasha/webhook-delivery/releases/tag/v1.0.0) and the [public Docker image](https://github.com/code-kasha/webhook-delivery/pkgs/container/webhook-delivery) are available. The [controlled demo / Swagger UI](https://webhook-delivery-demo.onrender.com/docs) is live; API credentials stay private.
 
 The demo is planned to end on **28 December 2026**. Render free services sleep after 15 minutes without inbound traffic, stopping the delivery worker until the API wakes; the first request can be slow. This is a fictional demonstration, not an always-on service. See [deployment details](docs/deployment.md#render--neon-demo).
 
@@ -29,7 +30,7 @@ Follow the [reviewer walkthrough](docs/walkthrough.md) to exercise delivery, rot
 
 ## Quick start
 
-Run these commands from this checkout. Requires Docker Desktop/Engine for the first option, or Node.js 22.14+ and PostgreSQL 17+ for the second. Use pnpm 10.17.1 (the version pinned in `package.json`).
+The published image is `ghcr.io/code-kasha/webhook-delivery:v1.0.0` for Linux amd64 and arm64. For a source checkout, run these commands locally. Requires Docker Desktop/Engine for the first option, or Node.js 22.14+ and PostgreSQL 17+ for the second. Use pnpm 10.17.1 (the version pinned in `package.json`).
 
 **With Docker:** copy `.env.example` to `.env`, generate an encryption key, and replace `SECRET_ENCRYPTION_KEY` in `.env` with the printed value:
 

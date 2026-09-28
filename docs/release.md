@@ -1,6 +1,6 @@
 # Release checklist
 
-This is a public, unreleased project. Remote actions require Akash's explicit request in the current message; permission for one push does not cover a later push.
+v1.0.0 was released on 28 September 2026. See [publication evidence](verification.md#published-artifacts-and-demo). Remote actions require Akash's explicit request in the current message; permission for one push does not cover a later push.
 
 ## Before v1.0.0
 

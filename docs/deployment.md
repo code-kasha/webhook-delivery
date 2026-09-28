@@ -76,11 +76,11 @@ Public `/docs` and `/openapi.json` disclose the contract, not customer data. Pro
 
 ## Render + Neon demo
 
-Deployed and verified on 28 September 2026 (IST), from commit `74bfac0`:
+Initially deployed and verified on 28 September 2026 (IST) from `74bfac0`; the API was subsequently deployed from release commit `6883934` and verified as v1.0.0:
 
 - [API / Swagger UI](https://webhook-delivery-demo.onrender.com/docs): Render Free Docker web service in Singapore, `HOST=0.0.0.0`, `PORT=10000`, `/ready` health check and `ALLOW_PRIVATE_DESTINATIONS=false`.
 - Dedicated Neon Free PostgreSQL 17 project in AWS Singapore, fixed 0.25 CU, with a `sslmode=verify-full` connection URL. Migrations and private admin/publish-only keys were created locally using the documented CLI before API startup.
-- [Controlled receiver](https://webhook-delivery-receiver.onrender.com): separate Render Free Node 22.23.2 service from the same commit. Build: `pnpm install --frozen-lockfile --prod=false`; start: `pnpm receiver`. Set `RECEIVER_HOST=0.0.0.0`, `PORT=4000`, `NODE_VERSION=22.23.2`, and the registered endpoint's signing secret as private `WEBHOOK_SECRET`. Use TCP health checks because unsigned HTTP requests correctly return 401. Its deduplication is in memory and it performs no business actions.
+- [Controlled receiver](https://webhook-delivery-receiver.onrender.com): separate Render Free Node 22.23.2 service from initial commit `74bfac0` (receiver source is unchanged in v1.0.0). Build: `pnpm install --frozen-lockfile --prod=false`; start: `pnpm receiver`. Set `RECEIVER_HOST=0.0.0.0`, `PORT=4000`, `NODE_VERSION=22.23.2`, and the registered endpoint's signing secret as private `WEBHOOK_SECRET`. Use TCP health checks because unsigned HTTP requests correctly return 401. Its deduplication is in memory and it performs no business actions.
 
 Both services have automatic deployment disabled. Database credentials, the encryption key, API keys and signing secret are private; no public publishing key is offered. The operator registered only the controlled receiver and sent fictional `demo.lead_created` events. Readiness, Swagger assets, authentication/scope rejection, private-destination rejection, idempotency, signed HTTPS delivery and retained state across an actual Render API restart passed; see [verification](verification.md#hosted-demo--28-september-2026-ist).
 
@@ -88,7 +88,7 @@ Render's [free web services](https://render.com/docs/free) spin down after 15 mi
 
 The receiver can also sleep, so a cold start can delay a delivery or cause a bounded attempt to time out. No keepalive automation is configured. Render's 750 free instance hours are shared across the workspace, including other services; bandwidth/build allowances also apply. Free services do not support the requested custom shutdown delay, so this demo uses Render's default; restart logs showed the old process draining and a replacement starting.
 
-Planned retirement is **28 December 2026**, three months after this deployment. No release date is implied; reconcile the date with the actual v1.0.0 release during task 6. Retirement is manual, not a scheduled deletion: remove the two dedicated demo services and dedicated Neon project, then update these links. Do not remove unrelated workspace resources.
+Planned retirement is **28 December 2026**, three months after this deployment. v1.0.0 was also released on 28 September 2026, so this remains three months after release. Retirement is manual, not a scheduled deletion: remove the two dedicated demo services and dedicated Neon project, then update these links. Do not remove unrelated workspace resources.
 
 ## Publishing
 

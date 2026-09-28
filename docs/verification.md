@@ -108,3 +108,9 @@ Both provider deployments reported live. Credentials and detailed test evidence 
 ## v1.0.0 release candidate — 28 September 2026
 
 Version fields in package metadata, generated OpenAPI and sender user-agent were updated together. Windows lint, typecheck, build and schema freshness passed. The rebuilt Linux Node 22 test image passed all 85 tests against the local PostgreSQL 17 database, including both HTTPS tests with OpenSSL installed. The release runtime image applied migrations and passed the running-container smoke test; graceful stop exited 0. Release publication and both architecture manifests are verified separately after the authorized tag workflow completes.
+
+### Published artifacts and demo
+
+[Tag CI run 36375055631](https://github.com/code-kasha/webhook-delivery/actions/runs/36375055631) passed Node 22/24 checks, image publication and release creation. [v1.0.0](https://github.com/code-kasha/webhook-delivery/releases/tag/v1.0.0) was published on 28 September 2026 from `6883934`, with OpenAPI, receiver helper, receiver documentation and SHA256SUMS. Downloaded assets matched every checksum. An unauthenticated GHCR manifest request succeeded for `v1.0.0` and listed Linux amd64 and arm64 plus build attestations; the index digest is `sha256:1548634c6f2b56929df757e96d0013b3cd6ed9eb64fbe11d904f187584d0b53b`. Docker pulled it using an empty credential configuration; the published amd64 image reported version 1.0.0 and UID 1000.
+
+Render deployed the API from the release commit. Hosted smoke passed, OpenAPI reported 1.0.0, and a new fictional event succeeded on its first signed HTTPS attempt with 204. Duplicate publishing, publish-only scope enforcement and private-destination rejection passed again. A GitHub `demo` deployment record links that exact commit to the live Swagger URL. Repository About now links the demo, topics describe the implemented stack, and the custom social preview was uploaded and visually checked.

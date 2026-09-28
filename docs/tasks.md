@@ -12,7 +12,7 @@ Updated 28 September 2026. These are small handoff units, suitable for separate 
 - [x] Run 67 tests on Windows/Node 26 and Linux/Node 22 with real PostgreSQL 17.11.
 - [x] Pass lint, type-check, build, schema freshness and amd64 running-container smoke; observe clean container shutdown (exit 0).
 
-“Implemented” does not mean independently reviewed or released. Version remains `0.1.0`; the target is v1.0.0.
+“Implemented” does not mean independently reviewed or released. The baseline began at `0.1.0`; v1.0.0 publication is recorded under task 6.
 
 ## 1. Review delivery correctness and security
 
@@ -58,19 +58,19 @@ Completed 28 September 2026 (IST), following deployment authorization. [Live Swa
 
 ## 6. Prepare and publish v1.0.0 — publication only when requested
 
-- [ ] Complete tasks 1–5 and `docs/release.md`.
-- [ ] Set version to `1.0.0` consistently in package, OpenAPI and sender user-agent; regenerate the schema and date the changelog.
-- [ ] Run final checks, commit locally with the agent co-author trailer, then push/tag only on explicit request.
-- [ ] Verify the actual amd64/arm64 GHCR manifests, package visibility, release notes and downloadable SHA256SUMS.
-- [ ] Add real release/image links and the requested completed/not-actively-maintained status only after shipping.
+- [x] Complete tasks 1–5 and `docs/release.md`.
+- [x] Set version to `1.0.0` consistently in package, OpenAPI and sender user-agent; regenerate the schema and date the changelog.
+- [x] Run final checks, commit locally with the agent co-author trailer, then push/tag only on explicit request.
+- [x] Verify the actual amd64/arm64 GHCR manifests, package visibility, release notes and downloadable SHA256SUMS.
+- [x] Add real release/image links and the requested completed/not-actively-maintained status only after shipping.
 
-**Done when:** all release artifacts can be downloaded and verified by a reviewer.
+Completed 28 September 2026. [v1.0.0](https://github.com/code-kasha/webhook-delivery/releases/tag/v1.0.0), public GHCR architecture manifests, downloaded checksums and the updated demo were verified; see [verification](verification.md#published-artifacts-and-demo).
 
 ## 7. Update portfolio, profile and repository metadata — only when requested
 
 - [ ] Read the portfolio's `agent-start.md`; update branch `v2` project data, 16:10 image, 2:1 cover and résumé highlights; run `pnpm resume` and check the two-project résumé selection.
 - [ ] Update `../code-kasha` Featured Projects/write-up link and Latest Releases row.
-- [ ] Set repository homepage/topics and upload the social preview through GitHub's web UI.
+- [x] Set repository homepage/topics and upload the social preview through GitHub's web UI.
 
 **Done when:** each separately authorized destination reflects the actual release and demo.
 
